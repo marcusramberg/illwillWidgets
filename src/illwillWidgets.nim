@@ -1,7 +1,7 @@
 ## A small widget library for illwill,
 
 import illwill, macros, strutils
-import strformat, os, math
+import strformat, math
 import std/wordwrap
 
 macro preserveColor(pr: untyped) =
@@ -129,7 +129,8 @@ proc clear*(wid: var Widget) {.inline.} =
 # ########################################################################################################
 # InfoBox
 # ########################################################################################################
-proc newInfoBox*(text: string, x, y: int, w = 10, h = 1, color = fgBlack, bgcolor = bgWhite): InfoBox =
+proc newInfoBox*(text: string, x, y: int, w = 10, h = 1, color = fgBlack,
+    bgcolor = bgWhite): InfoBox =
   result = InfoBox(
     text: text,
     x: x,
@@ -143,14 +144,15 @@ proc newInfoBox*(text: string, x, y: int, w = 10, h = 1, color = fgBlack, bgcolo
 
 proc render*(tb: var TerminalBuffer, wid: InfoBox) {.preserveColor.} =
   # TODO save old text to only overwrite the len of the old text
-  let  lines = wid.text.wrapText(wid.w, wid.wrapMode).splitLines()
+  let lines = wid.text.wrapText(wid.w, wid.wrapMode).splitLines()
   for idx in 0..lines.len-1:
     tb.write(wid.x, wid.y+idx, lines[idx].alignLeft(wid.w))
 
 proc inside(wid: InfoBox, mi: MouseInfo): bool =
   return (mi.x in wid.x .. wid.x+wid.w) and (mi.y == wid.y)
 
-proc dispatch*(tb: var TerminalBuffer, wid: InfoBox, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tb: var TerminalBuffer, wid: InfoBox,
+    mi: MouseInfo): Events {.discardable.} =
   if not wid.inside(mi): return
   case mi.action
   of mbaPressed: result.incl MouseDown
@@ -177,7 +179,8 @@ proc render*(tb: var TerminalBuffer, wid: Checkbox) {.preserveColor.} =
 proc inside(wid: Checkbox, mi: MouseInfo): bool =
   return (mi.x in wid.x .. wid.x+wid.text.len + 3) and (mi.y == wid.y)
 
-proc dispatch*(tr: var TerminalBuffer, wid: var Checkbox, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tr: var TerminalBuffer, wid: var Checkbox,
+    mi: MouseInfo): Events {.discardable.} =
   if not wid.inside(mi): return
   result.incl MouseHover
   case mi.action
@@ -212,7 +215,8 @@ proc uncheckAll*(wid: var RadioBoxGroup) =
   for radioButton in wid.radioButtons.mitems:
     radioButton[].checked = false
 
-proc dispatch*(tb: var TerminalBuffer, wid: var RadioBoxGroup, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tb: var TerminalBuffer, wid: var RadioBoxGroup,
+    mi: MouseInfo): Events {.discardable.} =
   var insideSome = false
   for radioButton in wid.radioButtons.mitems:
     if radioButton[].inside(mi): insideSome = true
@@ -231,7 +235,8 @@ proc element*(wid: RadioBoxGroup): Checkbox =
 # ########################################################################################################
 # Button
 # ########################################################################################################
-proc newButton*(text: string, x, y, w, h: int, border = true, color = fgBlue): Button =
+proc newButton*(text: string, x, y, w, h: int, border = true,
+    color = fgBlue): Button =
   result = Button(
     text: text,
     highlight: false,
@@ -252,17 +257,17 @@ proc render*(tb: var TerminalBuffer, wid: Button) {.preserveColor.} =
       wid.y,
       wid.x + wid.w,
       wid.y + wid.h,
-      doubleStyle=wid.highlight,
+      doubleStyle = wid.highlight,
     )
     tb.write(
-      wid.x+1 + wid.w div 2 - wid.text.len div 2 ,
+      wid.x+1 + wid.w div 2 - wid.text.len div 2,
       wid.y+1,
       wid.text
     )
   else:
     var style = if wid.highlight: styleBright else: styleDim
     tb.write(
-      wid.x + wid.w div 2 - wid.text.len div 2 ,
+      wid.x + wid.w div 2 - wid.text.len div 2,
       wid.y,
       style, wid.text
     )
@@ -270,7 +275,8 @@ proc render*(tb: var TerminalBuffer, wid: Button) {.preserveColor.} =
 proc inside(wid: Button, mi: MouseInfo): bool =
   return (mi.x in wid.x .. wid.x+wid.w) and (mi.y in wid.y .. wid.y+wid.h)
 
-proc dispatch*(tr: var TerminalBuffer, wid: var Button, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tr: var TerminalBuffer, wid: var Button,
+    mi: MouseInfo): Events {.discardable.} =
   ## if the mouse clicks this button
   if not wid.inside(mi):
     wid.highlight = false
@@ -300,7 +306,8 @@ proc add*(wid: var ChooseBox, elem: string) =
   wid.grow()
 
 proc newChooseBox*(elements: seq[string], x, y, w, h: int,
-      color = fgBlue, label = "", choosenidx = 0, shouldGrow = true): ChooseBox =
+      color = fgBlue, label = "", choosenidx = 0,
+          shouldGrow = true): ChooseBox =
   ## a list of text items to choose from, sometimes also called listbox
   ## if `shouldGrow == true` the chooseBox grows automatically when elements added
   result = ChooseBox(
@@ -343,12 +350,12 @@ proc element*(wid: var ChooseBox): string =
   if wid.filter.len == 0:
     try:
       return wid.elements[wid.choosenidx]
-    except:
+    except CatchableError:
       return ""
   else:
     try:
       return wid.filterElements()[wid.choosenidx]
-    except:
+    except CatchableError:
       return ""
 
 proc clear(tb: var TerminalBuffer, wid: var ChooseBox) {.inline.} =
@@ -378,15 +385,17 @@ proc render*(tb: var TerminalBuffer, wid: var ChooseBox) {.preserveColor.} =
     # if not wid.shouldGrow:
     #   if elemIdx >= wid.h: continue # do not draw additional elements but render scrollbar
     let elem = elemRaw.clampAndFillStr(wid.w)
-    if wid.chooseEnabled and  elemIdx == wid.choosenIdx:  #wid.mustBeHighlighted(idx):
+    if wid.chooseEnabled and elemIdx == wid.choosenIdx: #wid.mustBeHighlighted(idx):
       ## Draw selected
       tb.write resetStyle
-      tb.write(wid.x+1, wid.y + 1 + drawIdx, wid.color, wid.bgcolor, styleReverse, elem)
+      tb.write(wid.x+1, wid.y + 1 + drawIdx, wid.color, wid.bgcolor,
+          styleReverse, elem)
     else:
       tb.write resetStyle
       if elemIdx == wid.highlightIdx:
         ## Draw "bright"
-        tb.write(wid.x + 1, wid.y + 1 + drawIdx, wid.color, wid.bgcolor, styleBright, elem)
+        tb.write(wid.x + 1, wid.y + 1 + drawIdx, wid.color, wid.bgcolor,
+            styleBright, elem)
       else:
         ## Draw "normal"
         tb.write(wid.x + 1, wid.y + 1 + drawIdx, wid.color, wid.bgcolor, elem)
@@ -404,14 +413,16 @@ proc render*(tb: var TerminalBuffer, wid: var ChooseBox) {.preserveColor.} =
 proc inside(wid: ChooseBox, mi: MouseInfo): bool =
   return (mi.x in wid.x .. wid.x+wid.w) and (mi.y in wid.y .. wid.y+wid.h)
 
-proc dispatch*(tr: var TerminalBuffer, wid: var ChooseBox, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tr: var TerminalBuffer, wid: var ChooseBox,
+    mi: MouseInfo): Events {.discardable.} =
   result = {}
   if wid.shouldGrow: wid.grow()
   if not wid.inside(mi): return
   result.incl MouseHover
   case mi.action
   of mbaPressed:
-    wid.choosenidx = clamp( (mi.y - wid.y)-1 , 0, wid.elements.len-1) # Moved up TEST if everything works
+    wid.choosenidx = clamp( (mi.y - wid.y)-1, 0,
+        wid.elements.len-1) # Moved up TEST if everything works
     result.incl MouseDown
   of mbaReleased:
     # wid.choosenidx = clamp( (mi.y - wid.y)-1 , 0, wid.elements.len-1) # Moved up TEST if everything works
@@ -455,7 +466,8 @@ proc render*(tb: var TerminalBuffer, wid: TextBox) {.preserveColor.} =
 proc inside(wid: TextBox, mi: MouseInfo): bool =
   return (mi.x in wid.x .. wid.x+wid.w) and (mi.y == wid.y)
 
-proc dispatch*(tb: var TerminalBuffer, wid: var TextBox, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tb: var TerminalBuffer, wid: var TextBox,
+    mi: MouseInfo): Events {.discardable.} =
   if wid.inside(mi):
     result.incl MouseHover
     case mi.action
@@ -468,7 +480,8 @@ proc dispatch*(tb: var TerminalBuffer, wid: var TextBox, mi: MouseInfo): Events 
   elif not wid.inside(mi) and (mi.action == mbaReleased or mi.action == mbaPressed):
     wid.focus = false
 
-proc handleKey*(tb: var TerminalBuffer, wid: var TextBox, key: Key): bool {.discardable.} =
+proc handleKey*(tb: var TerminalBuffer, wid: var TextBox,
+    key: Key): bool {.discardable.} =
   ## if this function return "true" the textbox lost focus by enter
   result = false
 
@@ -494,9 +507,10 @@ proc handleKey*(tb: var TerminalBuffer, wid: var TextBox, key: Key): bool {.disc
     wid.caretIdx = 0
   of Backspace:
     try:
-      delete(wid.text, wid.caretIdx-1, wid.caretIdx-1)
-      decCaret
-    except:
+      if wid.text.len > 0:
+        delete(wid.text, wid.caretIdx-1..wid.caretIdx-1)
+        decCaret
+    except CatchableError:
       discard
   of Right:
     incCaret
@@ -510,7 +524,7 @@ proc handleKey*(tb: var TerminalBuffer, wid: var TextBox, key: Key): bool {.disc
         wid.text.insert(ch, wid.caretIdx)
         wid.caretIdx.inc
         wid.caretIdx = clamp(wid.caretIdx, 0, wid.text.len)
-      except:
+      except CatchableError:
         discard
 
 template setKeyAsHandled*(key: Key) =
@@ -521,8 +535,9 @@ template setKeyAsHandled*(key: Key) =
 # ########################################################################################################
 # ProgressBar
 # ########################################################################################################
-proc newProgressBar*(text: string, x, y: int, l = 10, value = 0.0, maxValue = 100.0,
-    orientation = Horizontal, bgDone = bgGreen , bgTodo = bgRed): ProgressBar =
+proc newProgressBar*(text: string, x, y: int, l = 10, value = 0.0,
+    maxValue = 100.0, orientation = Horizontal, bgDone = bgGreen,
+        bgTodo = bgRed): ProgressBar =
   result = ProgressBar(
     text: text,
     x: x,
@@ -549,7 +564,7 @@ proc render*(tb: var TerminalBuffer, wid: ProgressBar) {.preserveColor.} =
   let num = (wid.l.float / 100.0).float * wid.percent
   if wid.orientation == Horizontal:
     # write progress idicator
-    let doneRange =  wid.x .. wid.x + num.int - 1
+    let doneRange = wid.x .. wid.x + num.int - 1
     let todoRange = wid.x + num.int .. (wid.x + wid.l) - 1
     for idxx in doneRange:
       tb.write(idxx, wid.y, wid.color, wid.bgDone, "=")
@@ -557,10 +572,11 @@ proc render*(tb: var TerminalBuffer, wid: ProgressBar) {.preserveColor.} =
       tb.write(idxx, wid.y, wid.color, wid.bgTodo, "-")
 
     if wid.text.len > 0:
-      let textRange = (wid.x + (wid.l div 2) ) - wid.text.len div 2 .. ((wid.x + (wid.l div 2) ) - wid.text.len div 2) + (wid.text.len - 1)
+      let textRange = (wid.x + (wid.l div 2)) - wid.text.len div 2 .. ((wid.x +
+          (wid.l div 2)) - wid.text.len div 2) + (wid.text.len - 1)
       var idx = 0
       for idxx in textRange:
-        let ch = $wid.text[idx]  # txt[] # get the char at this idxx position
+        let ch = $wid.text[idx] # txt[] # get the char at this idxx position
         idx.inc
         if doneRange.contains idxx:
           tb.write(idxx, wid.y, wid.colorTextDone, wid.bgDone, ch) # TODO
@@ -594,7 +610,8 @@ proc valueOnPos*(wid: ProgressBar, mi: MouseInfo): float =
   let cell = ((mi.x - wid.x))
   return (cell / wid.l) * wid.maxValue
 
-proc dispatch*(tb: var TerminalBuffer, wid: var ProgressBar, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tb: var TerminalBuffer, wid: var ProgressBar,
+    mi: MouseInfo): Events {.discardable.} =
   if not wid.inside(mi): return
   result.incl MouseHover
   case mi.action
@@ -607,7 +624,9 @@ proc dispatch*(tb: var TerminalBuffer, wid: var ProgressBar, mi: MouseInfo): Eve
 # ########################################################################################################
 # TableBox
 # ########################################################################################################
-proc newTableBox*(x, y, w, h: int, borderColor = fgCyan, color = fgWhite, bgColor = bgBlack, colorHighlight = fgRed, bgHighlight = bgYellow): TableBox =
+proc newTableBox*(x, y, w, h: int, borderColor = fgCyan, color = fgWhite,
+    bgColor = bgBlack, colorHighlight = fgRed,
+    bgHighlight = bgYellow): TableBox =
   result = TableBox(
     x: x,
     y: y,
@@ -632,9 +651,11 @@ proc addRow*(wid: var TableBox, row: seq[string]) =
   wid.rows.add(row)
 
 proc inside(wid: TableBox, mi: MouseInfo): bool =
-  result = wid.x < mi.x and mi.x < wid.x + wid.w and wid.y < mi.y and mi.y < wid.y + wid.h
+  result = wid.x < mi.x and mi.x < wid.x + wid.w and wid.y < mi.y and mi.y <
+      wid.y + wid.h
 
-proc dispatch*(tb: var TerminalBuffer, wid: var TableBox, mi: MouseInfo): Events {.discardable.} =
+proc dispatch*(tb: var TerminalBuffer, wid: var TableBox,
+    mi: MouseInfo): Events {.discardable.} =
   tb.setForegroundColor(fgRed)
   if not wid.inside(mi):
     wid.highlightIdx = -1
